@@ -28,6 +28,8 @@ CONFIG = {
     "fallback_p0": 2300.0, "fallback_seed": 7,
     "sweep_points": 60,                      # widths sampled for breakeven.png
     "greeks_span": (0.5, 1.8),               # price window of greeks.png, as a multiple of P0
+    "sigma_grid": (0.20, 1.20, 0.05),        # annualised vol sweep: start, stop, step
+    "convergence_sigmas": (0.10, 0.20, 0.40, 0.80),   # small-sigma asymptotics check
     "figures_dir": Path(__file__).resolve().parent / "figures",
 }
 LOG = logging.getLogger("lp-risk")
@@ -155,6 +157,45 @@ def plot_greeks(P0: float, capital: float, path: Path) -> None:
                      xytext=(0, -16), textcoords="offset points", ha="center", fontsize=12)
     fig.tight_layout(), fig.savefig(path, dpi=150), plt.close(fig)
 
+def convergence_table(P0: float) -> pd.DataFrame:
+    """Quadrature against the small-sigma expansion APR* ~ sigma**2/8 (full range).
+
+    An independent check on the integrator: the relative error must shrink with
+    sigma, since the expansion is only asymptotic. Not a coincidence, a limit.
+    """
+    rows = []
+    for sigma in CONFIG["convergence_sigmas"]:
+        numeric = ilm.breakeven_fee_apr(P0, 0.0, math.inf, sigma, CONFIG["horizon_days"])
+        analytic = sigma ** 2 / 8.0
+        rows.append({"sigma %": round(100 * sigma, 1),
+                     "quadrature %": round(100 * numeric, 4),
+                     "sigma^2/8 %": round(100 * analytic, 4),
+                     "rel error %": round(100 * abs(numeric - analytic) / analytic, 2)})
+    return pd.DataFrame(rows)
+
+def plot_breakeven_vs_sigma(P0: float, sigma_realised: float, path: Path) -> None:
+    """Breakeven fee APR against volatility, with the sigma**2/8 parabola overlaid.
+
+    The driver is volatility, not direction, and the relationship is quadratic.
+    """
+    start, stop, step = CONFIG["sigma_grid"]
+    sigmas = np.arange(start, stop + step / 2, step)
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    for label, Pa, Pb in labelled_ranges(P0):
+        aprs = [100 * ilm.breakeven_fee_apr(P0, Pa, Pb, s, CONFIG["horizon_days"]) for s in sigmas]
+        ax.plot(100 * sigmas, aprs, lw=1.8, label=label,
+                linestyle="--" if "full" in label else "-")
+    ax.plot(100 * sigmas, [100 * s ** 2 / 8 for s in sigmas], color="black", lw=1.2, ls=":",
+            label=r"$\sigma^2/8$ (v2 asymptotics)")
+    ax.axvline(100 * sigma_realised, color="grey", lw=1)
+    ax.annotate(f"ETH 2024: {sigma_realised:.0%}", xy=(100 * sigma_realised, 1.0),
+                xycoords=("data", "axes fraction"), xytext=(6, -16),
+                textcoords="offset points", fontsize=10)
+    ax.set(xlabel="Annualised volatility (%)", ylabel="Breakeven fee APR (%)",
+           title=f"Breakeven fee APR vs volatility | {CONFIG['horizon_days']}d horizon")
+    ax.grid(alpha=0.3), ax.legend(title="LP range")
+    fig.tight_layout(), fig.savefig(path, dpi=150), plt.close(fig)
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     prices, source = load_prices()
@@ -167,10 +208,13 @@ def main() -> None:
              scenario_table(P0, CONFIG["reference_width"], capital).to_string(index=False))
     LOG.info("Range comparison: IL %% by shock, days out of range, breakeven APR\n%s",
              width_table(P0, prices, sigma, capital).to_string(index=False))
+    LOG.info("Quadrature vs the small-sigma expansion, full range\n%s",
+             convergence_table(P0).to_string(index=False))
     figures: Path = CONFIG["figures_dir"]; figures.mkdir(parents=True, exist_ok=True)
     plot_il_curves(P0, capital, figures / "il_vs_price.png")
     plot_breakeven(P0, sigma, figures / "breakeven.png")
     plot_greeks(P0, capital, figures / "greeks.png")
+    plot_breakeven_vs_sigma(P0, sigma, figures / "breakeven_vs_sigma.png")
     LOG.info("Figures written to %s", figures)
 
 if __name__ == "__main__":

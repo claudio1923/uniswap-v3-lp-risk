@@ -49,6 +49,20 @@ $$
 \text{IL}_{v2}(k) = \frac{2\sqrt{k}}{1+k} - 1
 $$
 
+Written in $X = \ln(P/P_0)$ this collapses to a single hyperbolic function:
+
+$$
+\text{IL} = \operatorname{sech}(X/2) - 1
+$$
+
+since $2\sqrt{k}/(1+k) = 2/(e^{-X/2} + e^{X/2})$. The form is worth keeping because the expansion $\operatorname{sech}(u) \approx 1 - u^2/2$ then gives the whole small-move behaviour in one line:
+
+$$
+\text{IL} \approx -\frac{X^2}{8}
+$$
+
+The loss is quadratic in the log price move, and everything below follows from it.
+
 This identity is checked numerically by the test suite in `tests/`: with $P_a = 0$ and $P_b = \infty$ the two formulas agree to within $10^{-12}$.
 
 ### Greeks
@@ -92,6 +106,23 @@ $$
 $$
 
 The concentrated payoff has no tractable closed-form integral, so $\mathbb{E}[\text{IL}]$ is evaluated by 128-node Gauss-Hermite quadrature — deterministic, no Monte Carlo sampling.
+
+Taking the expectation of $-X^2/8$ under the GBM, where $\mathbb{E}[X^2] = \sigma^2 T$ to leading order, gives a closed form for the full-range case:
+
+$$
+\mathbb{E}[\text{IL}] \approx -\frac{\sigma^2 T}{8} \qquad\Longrightarrow\qquad \text{APR}^{*} \approx \frac{\sigma^2}{8}
+$$
+
+This is a second consistency check, independent of the v2 limit: the quadrature must reproduce the asymptotics where the expansion is valid, and drift away from it where it is not. It does, and the relative error shrinks with $\sigma$ exactly as an asymptotic result requires:
+
+| $\sigma$ | quadrature | $\sigma^2/8$ | relative error |
+|---|---|---|---|
+| 10% | 0.1249% | 0.1250% | 0.06% |
+| 20% | 0.4988% | 0.5000% | 0.25% |
+| 40% | 1.9801% | 2.0000% | 0.99% |
+| 80% | 7.6884% | 8.0000% | 3.90% |
+
+At the 64.4% realised volatility of ETH in 2024 the quadrature gives 5.05% against 5.18% for the approximation — a 2.6% gap, which is the expansion failing, not the integrator.
 
 ## Data
 
@@ -139,6 +170,27 @@ Concentration multiplies the loss: on a +50% move the ±5% range loses 18.6% aga
 
 The breakeven rises as the range tightens, but **far less than the loss does**. Going from ±50% to ±5%, the IL at +50% worsens by a factor of 2.1 while the breakeven only moves from 16.7% to 24.5%. The reason is that at $\sigma = 64$% over a year the price almost certainly leaves any range: the three curves converge towards the same fate.
 
+### Volatility is the driver, not direction
+
+![Breakeven fee APR vs volatility](figures/breakeven_vs_sigma.png)
+
+Sweeping $\sigma$ from 20% to 120% at a fixed one-year horizon separates two regimes cleanly. The full-range curve tracks the $\sigma^2/8$ parabola and only peels away above roughly 80% volatility, where a quadratic stops describing a loss bounded below by −100%.
+
+The concentrated curves sit far above it and are **less than quadratic**, increasingly so as the range tightens. Doubling volatility from 40% to 80% would multiply a quadratic breakeven by 4:
+
+| range | $\sigma$ = 40% | $\sigma$ = 80% | ratio | $\sigma$ = 100% |
+|---|---|---|---|---|
+| ±5% | 14.88% | 30.30% | **2.04×** | 37.74% |
+| ±20% | 12.17% | 28.15% | **2.31×** | 35.78% |
+| ±50% | 7.63% | 22.85% | **3.00×** | 30.77% |
+| full range (v2) | 1.98% | 7.69% | **3.88×** | 11.75% |
+
+The full range recovers the quadratic law almost exactly. The tighter the band, the further from it — the ±5% range responds to volatility almost linearly.
+
+The mechanism is saturation. Once the band is breached the position is fully converted to one asset and its loss can only grow as fast as the buy-and-hold benchmark it is measured against, so the expectation stops accelerating. Tightening the range buys a higher breakeven at low volatility and a flatter response at high volatility — the opposite of the intuition that a narrow range is uniformly more fragile to turbulence.
+
+The vertical line marks ETH's realised 64.4% in 2024. Everything to the right of it is not exotic: a 100% volatility year pushes the ±20% breakeven from 22.0% to 35.8%.
+
 ### The correction that changes the conclusion
 
 The breakeven above assumes fees accrue on the full position value for the entire horizon. That is false: **a concentrated position earns nothing while out of range**. Correcting for the fraction of 2024 actually spent in range:
@@ -176,7 +228,8 @@ uniswap-v3-lp-risk/
 ├── tests/              pytest suite, network-free
 ├── requirements.txt    pinned dependency versions
 ├── README.md
-└── figures/            il_vs_price.png, breakeven.png, greeks.png
+└── figures/            il_vs_price.png, breakeven.png, greeks.png,
+                        breakeven_vs_sigma.png
 ```
 
 ## Running it
