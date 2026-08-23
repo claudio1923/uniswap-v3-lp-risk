@@ -30,7 +30,11 @@ CONFIG = {
     "fallback_p0": 2300.0, "fallback_seed": 7,
     "sweep_points": 60,                      # widths sampled for breakeven.png
     "greeks_span": (0.5, 1.8),               # price window of greeks.png, as a multiple of P0
-    "multi_year_start": "2021-01-01",        # regime study window, end is today
+    # Regime study window. The end is pinned rather than "today" so the tables in
+    # the README stay exactly reproducible. ETH trades 24/7 and the current day's
+    # bar keeps updating, so the window must stop before today, not at it.
+    "multi_year_start": "2021-01-01",
+    "multi_year_end": "2026-08-23",          # exclusive: stops at the last settled UTC day
     "sigma_grid": (0.20, 1.20, 0.05),        # annualised vol sweep: start, stop, step
     "convergence_sigmas": (0.10, 0.20, 0.40, 0.80),   # small-sigma asymptotics check
     "figures_dir": Path(__file__).resolve().parent / "figures",
@@ -280,8 +284,7 @@ def main() -> None:
     plot_breakeven(P0, sigma, figures / "breakeven.png")
     plot_greeks(P0, capital, figures / "greeks.png")
     plot_breakeven_vs_sigma(P0, sigma, figures / "breakeven_vs_sigma.png")
-    tomorrow = str((pd.Timestamp.today() + pd.Timedelta(days=1)).date())
-    multi, multi_source = load_prices(CONFIG["multi_year_start"], tomorrow)
+    multi, multi_source = load_prices(CONFIG["multi_year_start"], CONFIG["multi_year_end"])
     years = year_table(multi)
     LOG.info("Regime study, %s, %d closes\n%s", multi_source, len(multi),
              years.to_string(index=False))

@@ -219,11 +219,11 @@ The 2024 result rests on one price path. Repeating it on 2021 through 2026 turns
 | 2023 | 365 | +90.0% | 46.4% | 1.38 | 1.4% | 1273% | 3.8% | 385% | 48.5% | 20.3% | 2.7% |
 | 2024 | 366 | +41.7% | 64.4% | 0.54 | 17.2% | 142% | 38.8% | 56.6% | 81.4% | 20.4% | 5.0% |
 | 2025 | 365 | −11.5% | 74.8% | 0.16 | 11.0% | 259% | 43.3% | 60.3% | 95.6% | 21.7% | 6.8% |
-| 2026 | 235 | −18.5% | 65.1% | 0.31 | 7.2% | 424% | 14.9% | 178% | 100.0% | 18.6% | 5.2% |
+| 2026 | 234 | −19.2% | 65.3% | 0.33 | 7.3% | 424% | 14.5% | 184% | 100.0% | 18.7% | 5.2% |
 
 *"corr." is the breakeven fee APR corrected for time in range: what the position must earn on the days it is actually earning.*
 
-*The 2026 row is a live partial year, computed here through 2026-08-23. ETH trades around the clock, so its last observation is the current price rather than a settled close: rerunning `analysis.py` on a later day will shift that row slightly. Every other row is final.*
+*2026 is a partial year. The study window is pinned in `CONFIG` to the last settled UTC day, 2026-08-22, so every figure in this table is exactly what `analysis.py` prints: ETH trades around the clock and an open day would keep moving the last row between runs.*
 
 ![Corrected breakeven by year](figures/breakeven_by_year.png)
 
@@ -249,9 +249,9 @@ This is not a subtlety of the estimate, it is structural. Under a driftless GBM 
 
 ### What is actually viable
 
-One number in the table is stable. The ±50% band required 20.3%, 20.4%, 21.7% and 18.6% across 2023, 2024, 2025 and 2026 — four years with returns from −18.5% to +90.0% and volatilities from 46% to 75%, all landing within three points of each other. Only 2021 and 2022, the two extreme regimes, break out of it.
+One number in the table is stable. The ±50% band required 20.3%, 20.4%, 21.7% and 18.7% across 2023, 2024, 2025 and 2026 — four years with returns from −19.2% to +90.0% and volatilities from 46% to 75%, all landing within three points of each other. Only 2021 and 2022, the two extreme regimes, break out of it.
 
-The narrow bands never come close. In four of six years the ±5% range would have needed more than 250% annualised on its active days, and in 2021 it was in range for a single day out of 365 — at which point the figure stops being an APR and simply means the position was never alive.
+The narrow bands never come close. In five of six years the ±5% range would have needed more than 250% annualised on its active days, and in 2021 it was in range for a single day out of 365 — at which point the figure stops being an APR and simply means the position was never alive.
 
 Two caveats on all of this. Six observations of one asset is a sample, not a distribution, and the years are not independent draws from a stationary process. And the correction assumes fees accrue at a constant rate whenever the price is inside the band, which overstates how tradeable those active days really were.
 
