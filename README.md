@@ -8,16 +8,16 @@ Quantitative risk analysis of a concentrated liquidity position on Uniswap v3, E
 
 Providing liquidity on Uniswap v3 is a short volatility trade. The pool sells your ETH as the price rises and buys it back as it falls, so the position always ends up worth less than simply holding the two assets — the *impermanent loss*. Fees are the compensation. **This repository computes how large those fees have to be.**
 
-The catch that most back-of-envelope answers miss: a concentrated position earns nothing while the price sits outside its range, but keeps losing. Correcting for that changes the answer by a factor of three.
+The catch that most back-of-envelope answers miss: a concentrated position earns nothing while the price sits outside its range, but keeps losing. Correcting for that multiplies the answer by 2.6 for a ±20% band, and by almost six for a ±5% one.
 
 ETH/USDC in 2024, 100,000 USDC deposited on 1 January and never rebalanced:
 
 | LP range | days in range | fee APR needed **on active days** | verdict |
 |---|---|---|---|
-| ±5% | 17% | **142%** | not viable |
-| ±20% | 39% | **57%** | demanding |
-| ±50% | 81% | **20%** | plausible |
-| full range (v2) | 100% | **5%** | easy, but earns little |
+| ±5% | 17.2% | **142.0%** | not viable |
+| ±20% | 38.8% | **56.6%** | demanding |
+| ±50% | 81.4% | **20.4%** | plausible |
+| full range (v2) | 100.0% | **5.0%** | easy, but earns little |
 
 Repeated across 2021–2026, the direction of the market turns out to be irrelevant — but so is volatility, which is the input every standard model uses. Ranking six years, realised volatility correlates with the required fee APR at $\rho = 0.37$; the ratio of net price displacement to volatility correlates at $\rho = 0.83$. **The quiet year, 2023, was the worst one to be concentrated in.**
 
@@ -218,12 +218,12 @@ The breakeven above assumes fees accrue on the full position value for the entir
 
 | range | days in range | nominal breakeven | APR required **while in range** |
 |---|---|---|---|
-| ±5% | 17.2% | 24.5% | **142.2%** |
-| ±20% | 38.8% | 22.0% | **56.7%** |
-| ±50% | 81.4% | 16.7% | **20.5%** |
+| ±5% | 17.2% | 24.5% | **142.0%** |
+| ±20% | 38.8% | 22.0% | **56.6%** |
+| ±50% | 81.4% | 16.7% | **20.4%** |
 | full range (v2) | 100.0% | 5.0% | **5.0%** |
 
-This is the practical answer to the research question. A ±5% ETH/USDC range in 2024 would have needed to yield over 140% annualised on its active days alone just to match buy & hold. The ±50% range gets away with 20.5%, the full range with 5%.
+This is the practical answer to the research question. A ±5% ETH/USDC range in 2024 would have needed to yield over 140% annualised on its active days alone just to match buy & hold. The ±50% range gets away with 20.4%, the full range with 5.0%.
 
 The correction is approximate: it uses the realised out-of-range frequency of 2024 as an estimate of the future, and it ignores that fee density is higher near the spot price — a narrow range, while in range, earns more than its share of capital. The two effects pull in opposite directions and do not obviously cancel; measuring them requires pool volume data, outside the scope of this work.
 
@@ -233,12 +233,12 @@ The 2024 result rests on one price path. Repeating it on 2021 through 2026 turns
 
 | year | days | return | vol | \|move\|/vol | ±5% in range | ±5% corr. | ±20% in range | ±20% corr. | ±50% in range | ±50% corr. | full corr. |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 2021 | 365 | +404.2% | 107.4% | 1.51 | 0.3% | 14758% | 0.5% | 7024% | 1.6% | 2048% | 13.4% |
-| 2022 | 365 | −68.3% | 87.2% | 1.32 | 1.1% | 3009% | 14.5% | 213% | 41.4% | 62.2% | 9.1% |
-| 2023 | 365 | +90.0% | 46.4% | 1.38 | 1.4% | 1273% | 3.8% | 385% | 48.5% | 20.3% | 2.7% |
-| 2024 | 366 | +41.7% | 64.4% | 0.54 | 17.2% | 142% | 38.8% | 56.6% | 81.4% | 20.4% | 5.0% |
-| 2025 | 365 | −11.5% | 74.8% | 0.16 | 11.0% | 259% | 43.3% | 60.3% | 95.6% | 21.7% | 6.8% |
-| 2026 | 234 | −19.2% | 65.3% | 0.33 | 7.3% | 424% | 14.5% | 184% | 100.0% | 18.7% | 5.2% |
+| 2021 | 365 | +404.2% | 107.4% | 1.51 | 0.3% | 14757.9% | 0.5% | 7023.6% | 1.6% | 2048.4% | 13.4% |
+| 2022 | 365 | −68.3% | 87.2% | 1.32 | 1.1% | 3008.5% | 14.5% | 213.2% | 41.4% | 62.2% | 9.1% |
+| 2023 | 365 | +90.0% | 46.4% | 1.38 | 1.4% | 1273.3% | 3.8% | 384.9% | 48.5% | 20.3% | 2.7% |
+| 2024 | 366 | +41.7% | 64.4% | 0.54 | 17.2% | 142.0% | 38.8% | 56.6% | 81.4% | 20.4% | 5.0% |
+| 2025 | 365 | −11.5% | 74.8% | 0.16 | 11.0% | 259.0% | 43.3% | 60.3% | 95.6% | 21.7% | 6.8% |
+| 2026 | 234 | −19.2% | 65.3% | 0.33 | 7.3% | 424.2% | 14.5% | 183.6% | 100.0% | 18.7% | 5.2% |
 
 *"corr." is the breakeven fee APR corrected for time in range: what the position must earn on the days it is actually earning.*
 
@@ -250,7 +250,7 @@ The 2024 result rests on one price path. Repeating it on 2021 through 2026 turns
 
 The natural claim is that narrow ranges are punished by *movement*, not *direction*, so years of opposite sign but similar turbulence should look alike. Half of it survives.
 
-**Direction is indeed irrelevant.** Two rising years, 2021 and 2023, sit at 7024% and 385% for the ±20% band. Two falling years, 2022 and 2025, sit at 213% and 60%. Within each sign the spread is more than an order of magnitude: knowing which way the market went tells you nothing.
+**Direction is indeed irrelevant.** Two rising years, 2021 and 2023, sit at 7023.6% and 384.9% for the ±20% band. Two falling years, 2022 and 2025, sit at 213.2% and 60.3%. Within each sign the spread is more than an order of magnitude: knowing which way the market went tells you nothing.
 
 **But volatility does not explain the rest.** 2022 was nearly twice as volatile as 2023 — 87.2% against 46.4% — and yet its corrected breakeven was *lower*: 213% against 385%. The ordering by volatility and the ordering by corrected breakeven disagree almost everywhere.
 
