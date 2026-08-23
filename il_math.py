@@ -119,31 +119,3 @@ def breakeven_fee_apr(P0: float, Pa: float, Pb: float, sigma: float,
     losses = np.array([impermanent_loss(float(p), P0, Pa, Pb, x0, y0) for p in prices])
     expected_il = float(w @ losses) / math.sqrt(math.pi)  # E[IL] under the GBM
     return -expected_il / T
-
-
-if __name__ == "__main__":
-    P0 = 3000.0
-    # 1. Pa -> 0 and Pb -> inf must collapse exactly onto the v2 formula.
-    x0, y0 = position_amounts(1.0, P0, 0.0, math.inf)
-    for k in (0.25, 0.5, 0.9, 1.0, 1.5, 2.0, 4.0):
-        got, want = impermanent_loss(k * P0, P0, 0.0, math.inf, x0, y0), il_full_range(k)
-        assert abs(got - want) < 1e-12, f"full range k={k}: {got} vs {want}"
-    # 2. Same limit approached from a wide but finite range.
-    lo, hi = P0 * 1e-9, P0 * 1e9
-    xw, yw = position_amounts(1.0, P0, lo, hi)
-    assert abs(impermanent_loss(2 * P0, P0, lo, hi, xw, yw) - il_full_range(2.0)) < 1e-4
-    # 3. No price move means no loss; tighter ranges must lose more.
-    assert abs(impermanent_loss(P0, P0, 0.0, math.inf, x0, y0)) < 1e-15
-    losses = []
-    for width in (0.05, 0.20, 0.50):
-        lo, hi = P0 * (1 - width), P0 * (1 + width)
-        xa, ya = position_amounts(1.0, P0, lo, hi)
-        losses.append(impermanent_loss(1.2 * P0, P0, lo, hi, xa, ya))
-    assert losses[0] < losses[1] < losses[2] < il_full_range(1.2), losses
-    # 4. Out of range the position collapses to a single asset.
-    assert position_amounts(1.0, 1000.0, 2000.0, 4000.0)[1] == 0.0
-    assert position_amounts(1.0, 5000.0, 2000.0, 4000.0)[0] == 0.0
-    # 5. Breakeven fee APR must rise as the range tightens.
-    aprs = [breakeven_fee_apr(P0, P0*(1-w), P0*(1+w), 0.60, 365) for w in (0.05, 0.20, 0.50)]
-    assert aprs[0] > aprs[1] > aprs[2] > 0.0, aprs
-    print(f"il_math: checks passed | breakeven APR +/-5/20/50% = {aprs[0]:.1%}, {aprs[1]:.1%}, {aprs[2]:.1%}")

@@ -1,5 +1,7 @@
 # uniswap-v3-lp-risk
 
+[![tests](https://github.com/claudio1923/uniswap-v3-lp-risk/actions/workflows/tests.yml/badge.svg)](https://github.com/claudio1923/uniswap-v3-lp-risk/actions/workflows/tests.yml)
+
 Quantitative risk analysis of a concentrated liquidity position on Uniswap v3, ETH/USDC pair.
 
 ## The question
@@ -47,7 +49,7 @@ $$
 \text{IL}_{v2}(k) = \frac{2\sqrt{k}}{1+k} - 1
 $$
 
-This identity is checked numerically by the tests at the bottom of `il_math.py`: with $P_a = 0$ and $P_b = \infty$ the two formulas agree to within $10^{-12}$.
+This identity is checked numerically by the test suite in `tests/`: with $P_a = 0$ and $P_b = \infty$ the two formulas agree to within $10^{-12}$.
 
 ### Breakeven fee APR
 
@@ -143,18 +145,21 @@ The model does **not** capture:
 
 ```
 uniswap-v3-lp-risk/
-├── il_math.py     closed-form formulas, pure functions, no I/O
-├── analysis.py    data, scenarios, tables, figures
+├── il_math.py          closed-form formulas, pure functions, no I/O
+├── analysis.py         data, scenarios, tables, figures
+├── tests/              pytest suite, network-free
+├── requirements.txt    pinned dependency versions
 ├── README.md
-└── figures/       il_vs_price.png, breakeven.png
+└── figures/            il_vs_price.png, breakeven.png
 ```
 
 ## Running it
 
-Self-consistency tests of the math, including the full-range limit:
+Self-consistency tests of the math, including the full-range limit and the
+small-sigma asymptotics. They touch no network, so they run anywhere:
 
 ```bash
-python il_math.py
+pytest -q
 ```
 
 Full analysis: tables to the terminal, figures regenerated:
