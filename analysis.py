@@ -5,6 +5,7 @@ two figures used by the README. Every number is computed in il_math.
 """
 
 import logging, math
+from itertools import permutations
 from pathlib import Path
 
 import matplotlib; matplotlib.use("Agg")   # headless backend: render straight to PNG
@@ -282,6 +283,29 @@ def lvr_table(P0: float, sigma: float) -> pd.DataFrame:
                      "multiple of sigma^2/8": round(y / base, 2)})
     return pd.DataFrame(rows)
 
+def permutation_pvalue(table: pd.DataFrame, column: str, max_rows: int = 8) -> float:
+    """Exact two-sided p-value for the rank correlation, by full enumeration.
+
+    With a handful of yearly observations no asymptotic test applies, so the
+    null distribution is built by permuting the ranks in every possible order -
+    n! of them - and counting how many reach the observed correlation. Exact,
+    deterministic and free of any distributional assumption, but only tractable
+    for small samples: n = 6 means 720 orderings, n = 10 already means 3.6M.
+    """
+    label = f"+/-{100 * CONFIG['reference_width']:.0f}%"
+    y = table[f"{label} corr"].rank().to_numpy()
+    x = table[column].rank().to_numpy()
+    n = len(x)
+    if n > max_rows:
+        raise ValueError(f"exact enumeration needs n <= {max_rows}, got {n}")
+    def rho(a):
+        a, b = a - a.mean(), y - y.mean()
+        return float(a @ b / math.sqrt((a @ a) * (b @ b)))
+    observed = abs(rho(x))
+    hits = sum(1 for order in permutations(range(n))
+               if abs(rho(x[list(order)])) >= observed - 1e-12)
+    return hits / math.factorial(n)
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     prices, source = load_prices()
@@ -307,9 +331,9 @@ def main() -> None:
     years = year_table(multi)
     LOG.info("Regime study, %s, %d closes\n%s", multi_source, len(multi),
              years.to_string(index=False))
-    LOG.info("Spearman rho against the corrected breakeven: vol %+.3f | |move| %+.3f | "
-             "|move|/vol %+.3f", rank_correlation(years, "vol %"),
-             rank_correlation(years, "|move|"), rank_correlation(years, "|move|/vol"))
+    for column in ("vol %", "|move|", "|move|/vol"):
+        LOG.info("%-11s vs corrected breakeven: rho %+.3f | exact permutation p %.4f",
+                 column, rank_correlation(years, column), permutation_pvalue(years, column))
     plot_breakeven_by_year(years, figures / "breakeven_by_year.png")
     LOG.info("Figures written to %s", figures)
 

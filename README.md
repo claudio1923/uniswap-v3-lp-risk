@@ -19,7 +19,7 @@ ETH/USDC in 2024, 100,000 USDC deposited on 1 January and never rebalanced:
 | ±50% | 81.4% | **20.4%** | plausible |
 | full range (v2) | 100.0% | **5.0%** | easy, but earns little |
 
-Repeated across 2021–2026, the direction of the market turns out to be irrelevant — but so is volatility, which is the input every standard model uses. Ranking six years, realised volatility correlates with the required fee APR at $\rho = 0.37$; the ratio of net price displacement to volatility correlates at $\rho = 0.83$. **The quiet year, 2023, was the worst one to be concentrated in.**
+Repeated across 2021–2026, the direction of the market turns out to be irrelevant — but so is volatility, which is the input every standard model uses. Ranking six years, realised volatility correlates with the required fee APR at $\rho = 0.37$; the ratio of net price displacement to volatility reaches $\rho = 0.83$ — short of significance at six observations, though the mechanism behind it is structural rather than statistical. **The quiet year, 2023, was the worst one to be concentrated in.**
 
 Everything below derives these numbers from closed-form position math, checks that math against two independent analytic limits, and states plainly what the model leaves out.
 
@@ -281,15 +281,19 @@ The natural claim is that narrow ranges are punished by *movement*, not *directi
 
 Ranking the six years by each candidate statistic and correlating with the corrected breakeven (Spearman, computed in `analysis.py`):
 
-| statistic | $\rho$ |
-|---|---|
-| realised volatility $\sigma$ | **+0.371** |
-| $\lvert\ln(P_T/P_0)\rvert$ | **+0.771** |
-| $\lvert\ln(P_T/P_0)\rvert / \sigma$ | **+0.829** |
+| statistic | $\rho$ | exact $p$ |
+|---|---|---|
+| realised volatility $\sigma$ | +0.371 | 0.497 |
+| $\lvert\ln(P_T/P_0)\rvert$ | +0.771 | 0.103 |
+| $\lvert\ln(P_T/P_0)\rvert / \sigma$ | **+0.829** | **0.058** |
 
-Volatility alone is nearly uninformative. What predicts the outcome is net displacement measured against the noise — a trend-to-noise ratio. 2022 fell hard but thrashed on the way down and kept crossing back through its band; 2023 rose calmly and simply walked out of it. The quiet year was the worse one to be concentrated in.
+**None of these clears 5%, and the headline one misses by a hair.** Six yearly observations admit no asymptotic test, so `analysis.py` enumerates the null distribution exactly — all $6! = 720$ orderings of the ranks — rather than quoting a table. That distribution is coarse: with $n = 6$ the smallest correlation reaching $p < 0.05$ is $\rho = 0.886$, and the observed 0.829 sits one rung below it at $p = 0.058$.
 
-This is not a subtlety of the estimate, it is structural. Under a driftless GBM the nominal breakeven is a function of $\sigma$ alone — direction cannot enter, by construction. The quantity that decides whether the position was worth holding is the time it spent in range, and that is governed by the path, which $\sigma$ does not summarise.
+Saying the ratio "predicts" the outcome would therefore overstate the evidence. What the data supports is narrower and still worth having: **volatility alone is nearly uninformative** ($p = 0.50$, indistinguishable from noise), while displacement measured against noise orders the six years almost perfectly and falls just short of conventional significance on a sample this small.
+
+The mechanism, though, does not rest on the correlation. Under a driftless GBM the nominal breakeven is a function of $\sigma$ alone — direction and path cannot enter, by construction. Whether the position was worth holding depends on time in range, which is a property of the path. That argument is structural and would hold with one year of data or fifty; the six-year ranking is consistent with it, not the reason to believe it.
+
+The two years that carry the point sit adjacent in the ranking. 2022 fell hard but thrashed on the way down and kept crossing back through its band; 2023 rose calmly and simply walked out of it. The quiet year was the worse one to be concentrated in.
 
 ### What is actually viable
 
