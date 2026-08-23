@@ -19,6 +19,10 @@ ETH/USDC in 2024, 100,000 USDC deposited on 1 January and never rebalanced:
 | ±50% | 81.4% | **20.4%** | plausible |
 | full range (v2) | 100.0% | **5.0%** | easy, but earns little |
 
+![Impermanent loss by range width](figures/il_vs_price.png)
+
+*Every curve touches zero at the entry price and falls away from it. The dashed line is a full-range Uniswap v2 position; the others are concentrated bands. Narrowing the range steepens the loss.*
+
 Repeated across 2021–2026, the direction of the market turns out to be irrelevant — but so is volatility, which is the input every standard model uses. Ranking six years, realised volatility correlates with the required fee APR at $\rho = 0.37$; the ratio of net price displacement to volatility reaches $\rho = 0.83$ — short of significance at six observations, though the mechanism behind it is structural rather than statistical. **The quiet year, 2023, was the worst one to be concentrated in.**
 
 Everything below derives these numbers from closed-form position math, checks that math against two independent analytic limits, and states plainly what the model leaves out.
@@ -206,9 +210,7 @@ The shock grid is deliberately staggered off the range bounds, so no scenario la
 | ±50% | −34.73% | −9.11% | −1.36% | −1.04% | −4.85% | −11.74% | 18.6% | 16.7% |
 | full range (v2) | −9.65% | −2.28% | −0.33% | −0.24% | −1.12% | −2.70% | 0.0% | 5.0% |
 
-![IL by range width](figures/il_vs_price.png)
-
-Concentration multiplies the loss: on a +60% move the ±5% range loses 21.7% against 2.7% for the full range, **eight times as much**. The dashed red curve is the v2 benchmark and is the lower envelope of all the others.
+The figure at the top of this page plots these rows. Concentration multiplies the loss: on a +60% move the ±5% range loses 21.7% against 2.7% for the full range, **eight times as much**. The v2 benchmark is the lower envelope of all the others.
 
 ### Breakeven fee APR
 
