@@ -28,35 +28,39 @@ CONFIG = {
     "fallback_p0": 2300.0, "fallback_seed": 7,
     "sweep_points": 60,                      # widths sampled for breakeven.png
     "greeks_span": (0.5, 1.8),               # price window of greeks.png, as a multiple of P0
+    "multi_year_start": "2021-01-01",        # regime study window, end is today
     "sigma_grid": (0.20, 1.20, 0.05),        # annualised vol sweep: start, stop, step
     "convergence_sigmas": (0.10, 0.20, 0.40, 0.80),   # small-sigma asymptotics check
     "figures_dir": Path(__file__).resolve().parent / "figures",
 }
 LOG = logging.getLogger("lp-risk")
 
-def synthetic_prices() -> pd.Series:
+def synthetic_prices(start: str | None = None, end: str | None = None) -> pd.Series:
     """Seeded driftless GBM daily path, used only when yfinance is unreachable."""
-    dates = pd.date_range(CONFIG["start"], CONFIG["end"], freq="D", inclusive="left")
+    dates = pd.date_range(start or CONFIG["start"], end or CONFIG["end"],
+                          freq="D", inclusive="left")
     dt, sigma = 1.0 / CONFIG["days_per_year"], CONFIG["fallback_sigma"]
     shocks = np.random.default_rng(CONFIG["fallback_seed"]).normal(
         -0.5 * sigma ** 2 * dt, sigma * math.sqrt(dt), len(dates))
     return pd.Series(CONFIG["fallback_p0"] * np.exp(np.cumsum(shocks)), index=dates)
 
-def load_prices() -> tuple[pd.Series, str]:
+def load_prices(start: str | None = None, end: str | None = None) -> tuple[pd.Series, str]:
     """Daily ETH close for the configured window, with a synthetic GBM fallback."""
     try:
         import yfinance as yf
-        raw = yf.download(CONFIG["ticker"], start=CONFIG["start"], end=CONFIG["end"],
+        raw = yf.download(CONFIG["ticker"], start=start or CONFIG["start"],
+                          end=end or CONFIG["end"],
                           progress=False, auto_adjust=True, threads=False)
         if raw is None or raw.empty:
             raise RuntimeError("empty response")
         close = raw["Close"]                 # MultiIndex when several tickers are asked
         close = close.iloc[:, 0] if isinstance(close, pd.DataFrame) else close
+        close.index = pd.DatetimeIndex(close.index).tz_localize(None).normalize()
         return close.astype(float), "yfinance ETH-USD"
     except Exception as exc:                 # network, rate limit, parsing, missing dep
         LOG.warning("yfinance unavailable (%s: %s) - falling back to synthetic GBM",
                     type(exc).__name__, exc)
-        return synthetic_prices(), f"synthetic GBM sigma={CONFIG['fallback_sigma']:.0%}"
+        return synthetic_prices(start, end), f"synthetic GBM sigma={CONFIG['fallback_sigma']:.0%}"
 
 def bounds(P0: float, width: float | None) -> tuple[float, float]:
     """Range bounds for a +/- width band around P0; width=None means full range."""
@@ -196,6 +200,65 @@ def plot_breakeven_vs_sigma(P0: float, sigma_realised: float, path: Path) -> Non
     ax.grid(alpha=0.3), ax.legend(title="LP range")
     fig.tight_layout(), fig.savefig(path, dpi=150), plt.close(fig)
 
+def year_table(prices: pd.Series) -> pd.DataFrame:
+    """One row per calendar year: regime stats and the in-range-corrected breakeven.
+
+    Each year opens a fresh position at its own first close and holds it
+    unrebalanced to the end of the year, so the in-range share measures how long
+    a static band survives that regime. The corrected figure is the nominal
+    breakeven divided by that share: what the position must earn while active.
+    """
+    rows = []
+    for year, series in prices.groupby(prices.index.year):
+        P0 = float(series.iloc[0])
+        sigma = float(np.log(series).diff().std(ddof=1) * math.sqrt(CONFIG["days_per_year"]))
+        log_move = math.log(float(series.iloc[-1] / series.iloc[0]))
+        row = {"year": year, "days": len(series),
+               "return %": round(100 * (math.exp(log_move) - 1), 1),
+               "vol %": round(100 * sigma, 1),
+               "|move|": round(abs(log_move), 2),
+               "|move|/vol": round(abs(log_move) / sigma, 2)}
+        for label, Pa, Pb in labelled_ranges(P0):
+            in_range = float(((series >= Pa) & (series <= Pb)).mean())
+            apr = ilm.breakeven_fee_apr(P0, Pa, Pb, sigma, len(series))
+            row[f"{label} in"] = round(100 * in_range, 1)
+            row[f"{label} corr"] = round(100 * apr / in_range, 1) if in_range > 0 else math.inf
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+def rank_correlation(table: pd.DataFrame, column: str) -> float:
+    """Spearman rho between a regime statistic and the corrected breakeven.
+
+    Rank correlation on the reference width, computed as Pearson on ranks so the
+    project keeps depending on nothing beyond numpy and pandas.
+    """
+    label = f"+/-{100 * CONFIG['reference_width']:.0f}%"
+    return float(table[column].rank().corr(np.log(table[f"{label} corr"]).rank()))
+
+def plot_breakeven_by_year(table: pd.DataFrame, path: Path) -> None:
+    """Grouped bars of the in-range-corrected breakeven, one group per year.
+
+    Log scale: the values span two orders of magnitude between a trending year
+    and a quiet one, which is itself the finding.
+    """
+    labels = [label for label, _, _ in labelled_ranges(1.0)]
+    years = table["year"].astype(str).tolist()
+    slots = np.arange(len(years))
+    bar = 0.8 / len(labels)
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    for i, label in enumerate(labels):
+        ax.bar(slots + i * bar - 0.4 + bar / 2, table[f"{label} corr"], bar, label=label)
+    ax.axhline(100, color="grey", ls="--", lw=1)
+    ax.annotate("100% APR", xy=(1.0, 100), xycoords=("axes fraction", "data"),
+                xytext=(-4, 4), textcoords="offset points", ha="right", fontsize=9)
+    ax.set_yscale("log")
+    ax.set_xticks(slots, years)
+    ax.set(xlabel="Year (position opened at the first close, never rebalanced)",
+           ylabel="Breakeven fee APR while in range (%)",
+           title="What the position must earn on its active days, by regime")
+    ax.grid(alpha=0.3, axis="y"), ax.legend(title="LP range")
+    fig.tight_layout(), fig.savefig(path, dpi=150), plt.close(fig)
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     prices, source = load_prices()
@@ -215,6 +278,15 @@ def main() -> None:
     plot_breakeven(P0, sigma, figures / "breakeven.png")
     plot_greeks(P0, capital, figures / "greeks.png")
     plot_breakeven_vs_sigma(P0, sigma, figures / "breakeven_vs_sigma.png")
+    tomorrow = str((pd.Timestamp.today() + pd.Timedelta(days=1)).date())
+    multi, multi_source = load_prices(CONFIG["multi_year_start"], tomorrow)
+    years = year_table(multi)
+    LOG.info("Regime study, %s, %d closes\n%s", multi_source, len(multi),
+             years.to_string(index=False))
+    LOG.info("Spearman rho against the corrected breakeven: vol %+.3f | |move| %+.3f | "
+             "|move|/vol %+.3f", rank_correlation(years, "vol %"),
+             rank_correlation(years, "|move|"), rank_correlation(years, "|move|/vol"))
+    plot_breakeven_by_year(years, figures / "breakeven_by_year.png")
     LOG.info("Figures written to %s", figures)
 
 if __name__ == "__main__":

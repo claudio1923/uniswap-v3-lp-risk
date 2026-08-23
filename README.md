@@ -126,7 +126,7 @@ At the 64.4% realised volatility of ETH in 2024 the quadrature gives 5.05% again
 
 ## Data
 
-Daily ETH-USD closes for 2024 via `yfinance`, 366 observations. If the source is unreachable, `analysis.py` falls back to a synthetic GBM series at $\sigma = 60$% and says so in the log.
+Daily ETH-USD closes for 2024 via `yfinance`, 366 observations; the regime study below extends the same source back to 2021. If the source is unreachable, `analysis.py` falls back to a synthetic GBM series at $\sigma = 60$% and says so in the log.
 
 | | |
 |---|---|
@@ -206,6 +206,51 @@ This is the practical answer to the research question. A ±5% ETH/USDC range in 
 
 The correction is approximate: it uses the realised out-of-range frequency of 2024 as an estimate of the future, and it ignores that fee density is higher near the spot price — a narrow range, while in range, earns more than its share of capital. The two effects pull in opposite directions and do not obviously cancel; measuring them requires pool volume data, outside the scope of this work.
 
+## Regimes: five years and a stub
+
+The 2024 result rests on one price path. Repeating it on 2021 through 2026 turns a stated limitation into a test. Each year opens a fresh position at its own first close and holds it unrebalanced to 31 December, so the in-range share measures how long a static band survives that regime.
+
+| year | days | return | vol | \|move\|/vol | ±5% in range | ±5% corr. | ±20% in range | ±20% corr. | ±50% in range | ±50% corr. | full corr. |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2021 | 365 | +404.2% | 107.4% | 1.51 | 0.3% | 14758% | 0.5% | 7024% | 1.6% | 2048% | 13.4% |
+| 2022 | 365 | −68.3% | 87.2% | 1.32 | 1.1% | 3009% | 14.5% | 213% | 41.4% | 62.2% | 9.1% |
+| 2023 | 365 | +90.0% | 46.4% | 1.38 | 1.4% | 1273% | 3.8% | 385% | 48.5% | 20.3% | 2.7% |
+| 2024 | 366 | +41.7% | 64.4% | 0.54 | 17.2% | 142% | 38.8% | 56.6% | 81.4% | 20.4% | 5.0% |
+| 2025 | 365 | −11.5% | 74.8% | 0.16 | 11.0% | 259% | 43.3% | 60.3% | 95.6% | 21.7% | 6.8% |
+| 2026 | 235 | −18.5% | 65.1% | 0.31 | 7.2% | 424% | 14.9% | 178% | 100.0% | 18.6% | 5.2% |
+
+*"corr." is the breakeven fee APR corrected for time in range: what the position must earn on the days it is actually earning. 2026 is a partial year, through August.*
+
+![Corrected breakeven by year](figures/breakeven_by_year.png)
+
+### The hypothesis, and how it failed
+
+The natural claim is that narrow ranges are punished by *movement*, not *direction*, so years of opposite sign but similar turbulence should look alike. Half of it survives.
+
+**Direction is indeed irrelevant.** Two rising years, 2021 and 2023, sit at 7024% and 385% for the ±20% band. Two falling years, 2022 and 2025, sit at 213% and 60%. Within each sign the spread is more than an order of magnitude: knowing which way the market went tells you nothing.
+
+**But volatility does not explain the rest.** 2022 was nearly twice as volatile as 2023 — 87.2% against 46.4% — and yet its corrected breakeven was *lower*: 213% against 385%. The ordering by volatility and the ordering by corrected breakeven disagree almost everywhere.
+
+Ranking the six years by each candidate statistic and correlating with the corrected breakeven (Spearman, computed in `analysis.py`):
+
+| statistic | $\rho$ |
+|---|---|
+| realised volatility $\sigma$ | **+0.371** |
+| $\lvert\ln(P_T/P_0)\rvert$ | **+0.771** |
+| $\lvert\ln(P_T/P_0)\rvert / \sigma$ | **+0.829** |
+
+Volatility alone is nearly uninformative. What predicts the outcome is net displacement measured against the noise — a trend-to-noise ratio. 2022 fell hard but thrashed on the way down and kept crossing back through its band; 2023 rose calmly and simply walked out of it. The quiet year was the worse one to be concentrated in.
+
+This is not a subtlety of the estimate, it is structural. Under a driftless GBM the nominal breakeven is a function of $\sigma$ alone — direction cannot enter, by construction. The quantity that decides whether the position was worth holding is the time it spent in range, and that is governed by the path, which $\sigma$ does not summarise.
+
+### What is actually viable
+
+One number in the table is stable. The ±50% band required 20.3%, 20.4%, 21.7% and 18.6% across 2023, 2024, 2025 and 2026 — four years with returns from −18.5% to +90.0% and volatilities from 46% to 75%, all landing within three points of each other. Only 2021 and 2022, the two extreme regimes, break out of it.
+
+The narrow bands never come close. In four of six years the ±5% range would have needed more than 250% annualised on its active days, and in 2021 it was in range for a single day out of 365 — at which point the figure stops being an APR and simply means the position was never alive.
+
+Two caveats on all of this. Six observations of one asset is a sample, not a distribution, and the years are not independent draws from a stationary process. And the correction assumes fees accrue at a constant rate whenever the price is inside the band, which overstates how tradeable those active days really were.
+
 ## LIMITATIONS
 
 The model does **not** capture:
@@ -215,7 +260,7 @@ The model does **not** capture:
 - **Different fee tiers.** ETH/USDC exists across several pools (0.01%, 0.05%, 0.3%, 1%) with different depth and volume. The breakeven is expressed as a generic APR and is not tied to any specific tier.
 - **MEV and transaction ordering.** Arbitrageurs realign the pool price to the market price and capture part of the value; the LP is on the losing side of every realignment (*loss-versus-rebalancing*). The classic IL model used here understates that cost.
 - **Other LPs' liquidity concentration.** Fees earned depend on your share of the liquidity active at that tick, which changes continuously. Here the fee APR is an exogenous parameter, not an output of the model.
-- **Path dependency.** The out-of-range percentages come from **a single** price path, 2024, a year in which ETH returned +41.7%. A sideways year would produce numbers far more favourable to tight ranges. This is not a distribution, it is a sample of size one.
+- **Path dependency.** Partly addressed above by repeating the study on 2021-2026, which is what exposed volatility as a poor predictor of the corrected breakeven. Six overlapping years of one asset is still a sample, not a distribution, and the regimes are not independent draws.
 - **GBM as a price model.** Constant volatility, no jumps, no fat tails, no clustering. The expected breakeven is computed under this assumption and is optimistic to the extent that real ETH returns are leptokurtic.
 - **Fee reinvestment and compounding.** The breakeven is a simple annualised return, with no compounding.
 
@@ -229,7 +274,7 @@ uniswap-v3-lp-risk/
 ├── requirements.txt    pinned dependency versions
 ├── README.md
 └── figures/            il_vs_price.png, breakeven.png, greeks.png,
-                        breakeven_vs_sigma.png
+                        breakeven_vs_sigma.png, breakeven_by_year.png
 ```
 
 ## Running it
