@@ -267,6 +267,21 @@ def plot_breakeven_by_year(table: pd.DataFrame, path: Path) -> None:
     ax.grid(alpha=0.3, axis="y"), ax.legend(title="LP range")
     fig.tight_layout(), fig.savefig(path, dpi=150), plt.close(fig)
 
+def lvr_table(P0: float, sigma: float) -> pd.DataFrame:
+    """LVR yield per range, and its multiplier on the constant-product sigma**2/8.
+
+    Absolute LVR is the same for every band at a given liquidity: only the
+    capital it is charged against shrinks. The ratio is scale free, so it
+    depends on the width and the volatility, not on P0 or on position size.
+    """
+    base = sigma ** 2 / 8.0
+    rows = []
+    for label, Pa, Pb in labelled_ranges(P0):
+        y = ilm.lvr_yield(1.0, P0, Pa, Pb, sigma)
+        rows.append({"range": label, "LVR yield %": round(100 * y, 1),
+                     "multiple of sigma^2/8": round(y / base, 2)})
+    return pd.DataFrame(rows)
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     prices, source = load_prices()
@@ -279,6 +294,8 @@ def main() -> None:
              scenario_table(P0, CONFIG["reference_width"], capital).to_string(index=False))
     LOG.info("Range comparison: IL %% by shock, days out of range, breakeven APR\n%s",
              width_table(P0, prices, sigma, capital).to_string(index=False))
+    LOG.info("Loss-versus-rebalancing at the realised volatility\n%s",
+             lvr_table(P0, sigma).to_string(index=False))
     LOG.info("Quadrature vs the small-sigma expansion, full range\n%s",
              convergence_table(P0).to_string(index=False))
     figures: Path = CONFIG["figures_dir"]; figures.mkdir(parents=True, exist_ok=True)

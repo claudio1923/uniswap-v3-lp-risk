@@ -120,7 +120,7 @@ $$
 \text{LVR} = \frac{\sigma^2 P^2}{2}\,\bigl(-\Gamma\bigr)
 $$
 
-Two consequences follow directly, and both are checked in `tests/test_lvr.py`.
+Two consequences follow directly, and both are checked in `tests/test_lvr.py`. The table below is printed by `analysis.py`.
 
 **The full-range case is exactly $\sigma^2/8$ of position value per year** — the constant-product result, and the same number the breakeven quadrature converges to as $\sigma \to 0$. Two independent routes, one closed form in the curvature and one numerical integration of the terminal loss, meeting on the same constant.
 
@@ -128,10 +128,10 @@ Two consequences follow directly, and both are checked in `tests/test_lvr.py`.
 
 | LP range | LVR yield | multiplier on $\sigma^2/8$ |
 |---|---|---|
-| ±5% | 209.7% | **40.5×** |
-| ±20% | 53.8% | **10.4×** |
-| ±50% | 21.8% | **4.2×** |
-| full range (v2) | 5.2% | 1.0× |
+| ±5% | 209.7% | **40.47×** |
+| ±20% | 53.8% | **10.38×** |
+| ±50% | 21.8% | **4.20×** |
+| full range (v2) | 5.2% | 1.00× |
 
 And because $\Gamma$ is identically zero outside the band, so is LVR. **A concentrated position stops bleeding to arbitrage at the same instant it stops collecting fees** — the two sides of the ledger switch off together. That symmetry is what the in-range correction earlier in this README is measuring from the other direction.
 
