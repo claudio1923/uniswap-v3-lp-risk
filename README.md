@@ -60,14 +60,14 @@ $$
 so that $\mathbb{E}[P_T] = P_0$: no directional view, only volatility matters. The breakeven fee APR is the fee income that exactly cancels the expected loss:
 
 $$
-\text{APR}^{*} = -\frac{\mathbb{E}\left[\text{IL}(P_T)\right]}{T}, \qquad T = \frac{\text{horizon\_days}}{365}
+\text{APR}^{*} = -\frac{\mathbb{E}\left[\text{IL}(P_T)\right]}{T}, \qquad T = \frac{\text{horizon days}}{365}
 $$
 
 The concentrated payoff has no tractable closed-form integral, so $\mathbb{E}[\text{IL}]$ is evaluated by 128-node Gauss-Hermite quadrature — deterministic, no Monte Carlo sampling.
 
 ## Data
 
-Daily ETH-USD closes for 2024 via `yfinance`, 366 observations. If the source is unreachable, `analysis.py` falls back to a synthetic GBM series at $\sigma = 60\%$ and says so in the log.
+Daily ETH-USD closes for 2024 via `yfinance`, 366 observations. If the source is unreachable, `analysis.py` falls back to a synthetic GBM series at $\sigma = 60$% and says so in the log.
 
 | | |
 |---|---|
@@ -109,7 +109,7 @@ Concentration multiplies the loss: on a +50% move the ±5% range loses 18.6% aga
 
 ![Breakeven fee APR](figures/breakeven.png)
 
-The breakeven rises as the range tightens, but **far less than the loss does**. Going from ±50% to ±5%, the IL at +50% worsens by a factor of 2.1 while the breakeven only moves from 16.7% to 24.5%. The reason is that at $\sigma = 64\%$ over a year the price almost certainly leaves any range: the three curves converge towards the same fate.
+The breakeven rises as the range tightens, but **far less than the loss does**. Going from ±50% to ±5%, the IL at +50% worsens by a factor of 2.1 while the breakeven only moves from 16.7% to 24.5%. The reason is that at $\sigma = 64$% over a year the price almost certainly leaves any range: the three curves converge towards the same fate.
 
 ### The correction that changes the conclusion
 
