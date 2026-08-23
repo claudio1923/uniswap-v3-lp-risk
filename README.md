@@ -75,10 +75,10 @@ $$
 Written in $X = \ln(P/P_0)$ this collapses to a single hyperbolic function:
 
 $$
-\text{IL} = \operatorname{sech}(X/2) - 1
+\text{IL} = \mathrm{sech}(X/2) - 1
 $$
 
-since $2\sqrt{k}/(1+k) = 2/(e^{-X/2} + e^{X/2})$. The form is worth keeping because the expansion $\operatorname{sech}(u) \approx 1 - u^2/2$ then gives the whole small-move behaviour in one line:
+since $2\sqrt{k}/(1+k) = 2/(e^{-X/2} + e^{X/2})$. The form is worth keeping because the expansion $\mathrm{sech}(u) \approx 1 - u^2/2$ then gives the whole small-move behaviour in one line:
 
 $$
 \text{IL} \approx -\frac{X^2}{8}
