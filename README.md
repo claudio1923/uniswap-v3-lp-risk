@@ -110,6 +110,31 @@ Two results worth stating explicitly.
 
 This is the framing that makes the rest of the project legible. **Short gamma while collecting fees is a sold straddle**, with the fee APR in the role of theta. The breakeven computed below is therefore the classic condition *theta collected $\ge$ cost of gamma*, written for a payoff whose gamma happens to switch off outside a band.
 
+### Loss-versus-rebalancing
+
+Impermanent loss is a terminal quantity: it compares two portfolios at a single future price and says nothing about the road taken. The sharper modern measure is **loss-versus-rebalancing** — the rate at which the pool leaks value to arbitrageurs, relative to a strategy holding the same instantaneous exposure at market prices ([Milionis, Moallemi, Roughgarden and Wan, 2022](https://arxiv.org/abs/2208.06046)).
+
+Under the same GBM it is driven entirely by curvature, which means the gamma above already contains it:
+
+$$
+\text{LVR} = \frac{\sigma^2 P^2}{2}\,\bigl(-\Gamma\bigr)
+$$
+
+Two consequences follow directly, and both are checked in `tests/test_lvr.py`.
+
+**The full-range case is exactly $\sigma^2/8$ of position value per year** — the constant-product result, and the same number the breakeven quadrature converges to as $\sigma \to 0$. Two independent routes, one closed form in the curvature and one numerical integration of the terminal loss, meeting on the same constant.
+
+**Absolute LVR does not depend on the range bounds at all.** Same liquidity, same gamma, same leak in USDC per year. What narrowing does is shrink the capital that leak is charged against, and the ratio is the concentration multiplier — at ETH's realised 64.4% volatility:
+
+| LP range | LVR yield | multiplier on $\sigma^2/8$ |
+|---|---|---|
+| ±5% | 209.7% | **40.5×** |
+| ±20% | 53.8% | **10.4×** |
+| ±50% | 21.8% | **4.2×** |
+| full range (v2) | 5.2% | 1.0× |
+
+And because $\Gamma$ is identically zero outside the band, so is LVR. **A concentrated position stops bleeding to arbitrage at the same instant it stops collecting fees** — the two sides of the ledger switch off together. That symmetry is what the in-range correction earlier in this README is measuring from the other direction.
+
 ### Breakeven fee APR
 
 The price is assumed to follow a driftless geometric Brownian motion:

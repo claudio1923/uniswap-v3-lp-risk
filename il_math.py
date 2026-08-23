@@ -147,3 +147,40 @@ def position_gamma(L: float, P: float, Pa: float, Pb: float) -> float:
     if P <= 0.0:
         raise ValueError(f"P must be strictly positive, got {P}")
     return -L / (2.0 * P ** 1.5) if Pa < P < Pb else 0.0
+
+
+def lvr_rate(L: float, P: float, Pa: float, Pb: float, sigma: float) -> float:
+    """Loss-versus-rebalancing, in USDC per year, at spot P.
+
+    LVR is the rate at which the pool leaks value to arbitrageurs: the gap
+    between the LP and a strategy holding the same instantaneous exposure while
+    trading at market prices. Under a GBM it is driven entirely by curvature,
+
+        LVR = (sigma^2 * P^2 / 2) * (-Gamma)
+
+    so it inherits the gamma structure exactly: strictly positive inside the
+    range, and identically zero outside it. That is the sharp statement behind
+    the fee accounting - out of range the position stops bleeding to arbitrage
+    at the same instant it stops collecting fees.
+
+    Milionis, Moallemi, Roughgarden and Wan (2022), "Automated Market Making and
+    Loss-Versus-Rebalancing". sigma is the annualised volatility of log returns.
+    """
+    if sigma < 0.0:
+        raise ValueError(f"sigma must be non-negative, got {sigma}")
+    return 0.5 * sigma ** 2 * P ** 2 * -position_gamma(L, P, Pa, Pb)
+
+
+def lvr_yield(L: float, P: float, Pa: float, Pb: float, sigma: float) -> float:
+    """LVR as an annual fraction of position value: the fee APR that offsets it.
+
+    For a full-range position this is exactly sigma**2/8, the constant-product
+    result, which is also the small-sigma limit of breakeven_fee_apr. Narrowing
+    the range leaves the absolute LVR untouched - same L, same gamma - while
+    shrinking the capital it is charged against, so the yield rises. That ratio
+    is the concentration multiplier.
+    """
+    value = position_value(L, P, Pa, Pb)
+    if value <= 0.0:
+        raise ValueError("position value must be strictly positive")
+    return lvr_rate(L, P, Pa, Pb, sigma) / value
