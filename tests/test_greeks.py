@@ -83,13 +83,19 @@ def test_delta_is_continuous_at_the_bounds(bound):
     assert gaps[2] == pytest.approx(gaps[1] / 10, rel=0.01)
 
 
-def test_gamma_jumps_at_the_bounds():
-    """Not C2: gamma is bounded away from zero just inside and exactly zero just outside."""
+@pytest.mark.parametrize("bound", [PA, PB])
+def test_gamma_jumps_at_the_bounds(bound):
+    """Not C2: gamma sits at its analytic value just inside and is exactly zero outside.
+
+    Compared against -L/(2*P**1.5) rather than a fixed threshold, so the test says
+    the same thing at any liquidity instead of relying on this file's constants.
+    """
     eps = 1e-9
-    assert ilm.position_gamma(L, PA * (1 + eps), PA, PB) < -1e-4
-    assert ilm.position_gamma(L, PA * (1 - eps), PA, PB) == 0.0
-    assert ilm.position_gamma(L, PB * (1 - eps), PA, PB) < -1e-4
-    assert ilm.position_gamma(L, PB * (1 + eps), PA, PB) == 0.0
+    inside = bound * (1 + eps) if bound == PA else bound * (1 - eps)
+    outside = bound * (1 - eps) if bound == PA else bound * (1 + eps)
+    assert ilm.position_gamma(L, inside, PA, PB) == pytest.approx(
+        -L / (2 * inside ** 1.5), rel=1e-9)
+    assert ilm.position_gamma(L, outside, PA, PB) == 0.0
 
 
 def test_delta_at_the_upper_bound_is_zero():
