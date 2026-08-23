@@ -119,3 +119,31 @@ def breakeven_fee_apr(P0: float, Pa: float, Pb: float, sigma: float,
     losses = np.array([impermanent_loss(float(p), P0, Pa, Pb, x0, y0) for p in prices])
     expected_il = float(w @ losses) / math.sqrt(math.pi)  # E[IL] under the GBM
     return -expected_il / T
+
+
+def position_delta(L: float, P: float, Pa: float, Pb: float) -> float:
+    """dV/dP, in ETH: sensitivity of the position value to the spot price.
+
+    Inside the range V = L*(2*sqrt(P) - P/sqrt(Pb) - sqrt(Pa)), so
+        dV/dP = L*(1/sqrt(P) - 1/sqrt(Pb)) = x.
+    Below Pa the position is a flat ETH holding and dV/dP = x again; above Pb it
+    is pure USDC and dV/dP = 0, which is also x. Delta therefore equals the ETH
+    balance in all three regimes, and is continuous at both bounds.
+    """
+    return position_amounts(L, P, Pa, Pb)[0]
+
+
+def position_gamma(L: float, P: float, Pa: float, Pb: float) -> float:
+    """d2V/dP2, in ETH per USDC: -L/(2*P**1.5) strictly inside the range, else 0.
+
+    The value is concave in P wherever the position provides liquidity and linear
+    outside, so gamma jumps at Pa and Pb, where the second derivative does not
+    exist: the payoff is C1 but not C2. At the bounds this returns 0.
+
+    Short gamma while collecting fees is the same structure as a sold straddle,
+    with the fee APR playing the role of theta.
+    """
+    _validate_range(Pa, Pb)
+    if P <= 0.0:
+        raise ValueError(f"P must be strictly positive, got {P}")
+    return -L / (2.0 * P ** 1.5) if Pa < P < Pb else 0.0

@@ -51,6 +51,32 @@ $$
 
 This identity is checked numerically by the test suite in `tests/`: with $P_a = 0$ and $P_b = \infty$ the two formulas agree to within $10^{-12}$.
 
+### Greeks
+
+Substituting $x$ and $y$ into the value gives, inside the range,
+
+$$
+V(P) = L\left(2\sqrt{P} - \frac{P}{\sqrt{P_b}} - \sqrt{P_a}\right)
+$$
+
+and differentiating twice:
+
+$$
+\Delta = \frac{\partial V}{\partial P} = L\left(\frac{1}{\sqrt P} - \frac{1}{\sqrt{P_b}}\right) = x
+\qquad\qquad
+\Gamma = \frac{\partial^2 V}{\partial P^2} = -\frac{L}{2P^{3/2}} < 0
+$$
+
+Two results worth stating explicitly.
+
+**The delta equals the ETH balance**, and not only inside the range: below $P_a$ the position is a flat ETH holding, above $P_b$ it is pure USDC and both the delta and $x$ are zero. It holds in all three regimes because $V$ is linear in $P$ at fixed composition.
+
+**The gamma is strictly negative in range and exactly zero outside.** The payoff is $C^1$ but not $C^2$: the delta is continuous at both bounds — the tests verify that its one-sided gap vanishes linearly — while the gamma jumps.
+
+![Delta and gamma](figures/greeks.png)
+
+This is the framing that makes the rest of the project legible. **Short gamma while collecting fees is a sold straddle**, with the fee APR in the role of theta. The breakeven computed below is therefore the classic condition *theta collected $\ge$ cost of gamma*, written for a payoff whose gamma happens to switch off outside a band.
+
 ### Breakeven fee APR
 
 The price is assumed to follow a driftless geometric Brownian motion:
@@ -150,7 +176,7 @@ uniswap-v3-lp-risk/
 ├── tests/              pytest suite, network-free
 ├── requirements.txt    pinned dependency versions
 ├── README.md
-└── figures/            il_vs_price.png, breakeven.png
+└── figures/            il_vs_price.png, breakeven.png, greeks.png
 ```
 
 ## Running it

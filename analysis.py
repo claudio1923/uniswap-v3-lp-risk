@@ -27,6 +27,7 @@ CONFIG = {
     "fallback_sigma": 0.60,                  # annualised, used only if yfinance fails
     "fallback_p0": 2300.0, "fallback_seed": 7,
     "sweep_points": 60,                      # widths sampled for breakeven.png
+    "greeks_span": (0.5, 1.8),               # price window of greeks.png, as a multiple of P0
     "figures_dir": Path(__file__).resolve().parent / "figures",
 }
 LOG = logging.getLogger("lp-risk")
@@ -128,6 +129,32 @@ def plot_breakeven(P0: float, sigma: float, path: Path) -> None:
     ax.grid(alpha=0.3), ax.legend()
     fig.tight_layout(), fig.savefig(path, dpi=150), plt.close(fig)
 
+def plot_greeks(P0: float, capital: float, path: Path) -> None:
+    """Delta and gamma against spot for the reference range, on a shared price axis.
+
+    The kink of the delta and the jump of the gamma both sit on Pa and Pb: the
+    payoff is C1 but not C2, and the picture is the quickest way to see it.
+    """
+    width = CONFIG["reference_width"]
+    Pa, Pb = bounds(P0, width)
+    lo, hi = CONFIG["greeks_span"]
+    _, _, L = deposit(P0, Pa, Pb, capital)
+    prices = np.linspace(lo * P0, hi * P0, 800)
+    fig, (top, bottom) = plt.subplots(2, 1, figsize=(9, 7), sharex=True)
+    top.plot(prices, [ilm.position_delta(L, p, Pa, Pb) for p in prices], color="#1f77b4", lw=2)
+    top.set(ylabel="Delta  dV/dP  (ETH)",
+            title=f"Greeks of a {capital:,.0f} USDC position, range +/-{100 * width:.0f}%")
+    bottom.plot(prices, [ilm.position_gamma(L, p, Pa, Pb) for p in prices], color="#d62728", lw=2)
+    bottom.set(xlabel="ETH spot price (USDC)", ylabel="Gamma  d2V/dP2  (ETH per USDC)")
+    for axis in (top, bottom):
+        for bound, name in ((Pa, "$P_a$"), (Pb, "$P_b$")):
+            axis.axvline(bound, color="grey", ls="--", lw=1)
+        axis.grid(alpha=0.3)
+    for bound, name in ((Pa, "$P_a$"), (Pb, "$P_b$")):   # inside the axes, clear of the title
+        top.annotate(name, xy=(bound, 1.0), xycoords=("data", "axes fraction"),
+                     xytext=(0, -16), textcoords="offset points", ha="center", fontsize=12)
+    fig.tight_layout(), fig.savefig(path, dpi=150), plt.close(fig)
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     prices, source = load_prices()
@@ -143,6 +170,7 @@ def main() -> None:
     figures: Path = CONFIG["figures_dir"]; figures.mkdir(parents=True, exist_ok=True)
     plot_il_curves(P0, capital, figures / "il_vs_price.png")
     plot_breakeven(P0, sigma, figures / "breakeven.png")
+    plot_greeks(P0, capital, figures / "greeks.png")
     LOG.info("Figures written to %s", figures)
 
 if __name__ == "__main__":
