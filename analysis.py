@@ -223,7 +223,9 @@ def year_table(prices: pd.Series) -> pd.DataFrame:
                "return %": round(100 * (math.exp(log_move) - 1), 1),
                "vol %": round(100 * sigma, 1),
                "|move|": round(abs(log_move), 2),
-               "|move|/vol": round(abs(log_move) / sigma, 2)}
+               # A flat year has no noise to measure the move against: the ratio is
+               # undefined, not zero, and must not take the whole study down with it.
+               "|move|/vol": round(abs(log_move) / sigma, 2) if sigma > 0 else math.nan}
         for label, Pa, Pb in labelled_ranges(P0):
             in_range = float(((series >= Pa) & (series <= Pb)).mean())
             apr = ilm.breakeven_fee_apr(P0, Pa, Pb, sigma, len(series))
