@@ -4,6 +4,25 @@
 
 Quantitative risk analysis of a concentrated liquidity position on Uniswap v3, ETH/USDC pair.
 
+## In short
+
+Providing liquidity on Uniswap v3 is a short volatility trade. The pool sells your ETH as the price rises and buys it back as it falls, so the position always ends up worth less than simply holding the two assets — the *impermanent loss*. Fees are the compensation. **This repository computes how large those fees have to be.**
+
+The catch that most back-of-envelope answers miss: a concentrated position earns nothing while the price sits outside its range, but keeps losing. Correcting for that changes the answer by a factor of three.
+
+ETH/USDC in 2024, 100,000 USDC deposited on 1 January and never rebalanced:
+
+| LP range | days in range | fee APR needed **on active days** | verdict |
+|---|---|---|---|
+| ±5% | 17% | **142%** | not viable |
+| ±20% | 39% | **57%** | demanding |
+| ±50% | 81% | **20%** | plausible |
+| full range (v2) | 100% | **5%** | easy, but earns little |
+
+Repeated across 2021–2026, the direction of the market turns out to be irrelevant — but so is volatility, which is the input every standard model uses. Ranking six years, realised volatility correlates with the required fee APR at $\rho = 0.37$; the ratio of net price displacement to volatility correlates at $\rho = 0.83$. **The quiet year, 2023, was the worst one to be concentrated in.**
+
+Everything below derives these numbers from closed-form position math, checks that math against two independent analytic limits, and states plainly what the model leaves out.
+
 ## The question
 
 Given an LP position in a price range $[P_a, P_b]$:
