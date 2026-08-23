@@ -268,7 +268,7 @@ def plot_breakeven_by_year(table: pd.DataFrame, path: Path) -> None:
     ax.grid(alpha=0.3, axis="y"), ax.legend(title="LP range")
     fig.tight_layout(), fig.savefig(path, dpi=150), plt.close(fig)
 
-def lvr_table(P0: float, sigma: float) -> pd.DataFrame:
+def lvr_table(P0: float, sigma: float, prices: pd.Series, capital: float) -> pd.DataFrame:
     """LVR yield per range, and its multiplier on the constant-product sigma**2/8.
 
     Absolute LVR is the same for every band at a given liquidity: only the
@@ -278,9 +278,16 @@ def lvr_table(P0: float, sigma: float) -> pd.DataFrame:
     base = sigma ** 2 / 8.0
     rows = []
     for label, Pa, Pb in labelled_ranges(P0):
-        y = ilm.lvr_yield(1.0, P0, Pa, Pb, sigma)
-        rows.append({"range": label, "LVR yield %": round(100 * y, 1),
-                     "multiple of sigma^2/8": round(y / base, 2)})
+        _, _, L = deposit(P0, Pa, Pb, capital)
+        in_range = ilm.lvr_yield(1.0, P0, Pa, Pb, sigma)
+        # The in-range figure is a rate conditional on being in range. LVR is zero
+        # outside the band, so averaging it along the realised path - zeros included
+        # - gives what the position actually leaked over the year.
+        realised = float(np.mean([ilm.lvr_rate(L, float(price), Pa, Pb, sigma)
+                                  for price in prices])) / capital
+        rows.append({"range": label, "LVR yield % in range": round(100 * in_range, 1),
+                     "multiple of sigma^2/8": round(in_range / base, 2),
+                     "realised on the path %": round(100 * realised, 1)})
     return pd.DataFrame(rows)
 
 def permutation_pvalue(table: pd.DataFrame, column: str, max_rows: int = 8) -> float:
@@ -319,7 +326,7 @@ def main() -> None:
     LOG.info("Range comparison: IL %% by shock, days out of range, breakeven APR\n%s",
              width_table(P0, prices, sigma, capital).to_string(index=False))
     LOG.info("Loss-versus-rebalancing at the realised volatility\n%s",
-             lvr_table(P0, sigma).to_string(index=False))
+             lvr_table(P0, sigma, prices, capital).to_string(index=False))
     LOG.info("Quadrature vs the small-sigma expansion, full range\n%s",
              convergence_table(P0).to_string(index=False))
     figures: Path = CONFIG["figures_dir"]; figures.mkdir(parents=True, exist_ok=True)

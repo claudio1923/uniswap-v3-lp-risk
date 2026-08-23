@@ -138,3 +138,21 @@ def test_negative_sigma_raises():
 def test_non_positive_horizon_raises():
     with pytest.raises(ValueError):
         ilm.breakeven_fee_apr(P0, 0.0, math.inf, 0.6, 0.0)
+
+
+# --- A deposit whose legs disagree cannot be placed in full ---
+
+@pytest.mark.parametrize("scale_x,scale_y", [(1.0, 2.0), (2.0, 1.0), (1.0, 1.001)])
+def test_unbalanced_deposit_raises(scale_x, scale_y):
+    """The surplus would otherwise be counted as loss instead of returned."""
+    lo, hi = P0 * 0.8, P0 * 1.2
+    x0, y0 = unit_position(lo, hi)
+    with pytest.raises(ValueError, match="unbalanced deposit"):
+        ilm.impermanent_loss(P0, P0, lo, hi, scale_x * x0, scale_y * y0)
+
+
+@pytest.mark.parametrize("scale", [0.5, 1.0, 2.0, 1000.0])
+def test_a_balanced_deposit_of_any_size_is_accepted(scale):
+    lo, hi = P0 * 0.8, P0 * 1.2
+    x0, y0 = unit_position(lo, hi)
+    assert ilm.impermanent_loss(P0, P0, lo, hi, scale * x0, scale * y0) == pytest.approx(0.0, abs=1e-12)

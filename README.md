@@ -130,12 +130,16 @@ Two consequences follow directly, and both are checked in `tests/test_lvr.py`. T
 
 **Absolute LVR does not depend on the range bounds at all.** Same liquidity, same gamma, same leak in USDC per year. What narrowing does is shrink the capital that leak is charged against, and the ratio is the concentration multiplier — at ETH's realised 64.4% volatility:
 
-| LP range | LVR yield | multiplier on $\sigma^2/8$ |
-|---|---|---|
-| ±5% | 209.7% | **40.47×** |
-| ±20% | 53.8% | **10.38×** |
-| ±50% | 21.8% | **4.20×** |
-| full range (v2) | 5.2% | 1.00× |
+| LP range | LVR yield in range | multiplier on $\sigma^2/8$ | realised on the 2024 path |
+|---|---|---|---|
+| ±5% | 209.7% | **40.47×** | 36.2% |
+| ±20% | 53.8% | **10.38×** | 21.5% |
+| ±50% | 21.8% | **4.20×** | 19.6% |
+| full range (v2) | 5.2% | 1.00× | 5.9% |
+
+The first column is a rate **conditional on being in range**, which is the honest way to read a quantity that is identically zero outside the band. The last column drops that condition: it averages the instantaneous LVR along the realised 2024 path, zeros included, so it is what the position actually leaked. The gap between them is the same in-range correction applied to the breakeven earlier — the ±5% band leaks at forty times the constant-product rate while it is alive, and is alive 17% of the time.
+
+Note that the ordering compresses sharply once the correction is applied: 36.2% against 19.6% is a factor of 1.8, not the factor of 10 the conditional rates suggest. Concentration still costs more, but far less than the instantaneous figure implies.
 
 And because $\Gamma$ is identically zero outside the band, so is LVR. **A concentrated position stops bleeding to arbitrage at the same instant it stops collecting fees** — the two sides of the ledger switch off together. That symmetry is what the in-range correction earlier in this README is measuring from the other direction.
 
@@ -215,6 +219,8 @@ The figure at the top of this page plots these rows. Concentration multiplies th
 ### Breakeven fee APR
 
 ![Breakeven fee APR](figures/breakeven.png)
+
+*The knee near a half-width of 100% is not a numerical artefact: at that point $P_a 	o 0$ and the band degenerates into the full-range v2 case.*
 
 The breakeven rises as the range tightens, but **far less than the loss does**. Going from ±50% to ±5%, the IL at +60% worsens by a factor of 1.8 while the breakeven only moves from 16.7% to 24.5%. The reason is that at $\sigma = 64$% over a year the price almost certainly leaves any range: the three curves converge towards the same fate.
 

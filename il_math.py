@@ -23,8 +23,10 @@ def _validate_range(Pa: float, Pb: float) -> None:
 def liquidity_from_amounts(x0: float, y0: float, P0: float, Pa: float, Pb: float) -> float:
     """Liquidity L in sqrt(USDC*ETH) from depositing x0 ETH and y0 USDC at spot P0.
 
-    In range each leg implies its own liquidity and the binding one is the smaller:
-    Lx = x0 / (1/sqrt(P0) - 1/sqrt(Pb)),  Ly = y0 / (sqrt(P0) - sqrt(Pa)).
+    In range each leg implies its own liquidity, Lx = x0 / (1/sqrt(P0) - 1/sqrt(Pb))
+    and Ly = y0 / (sqrt(P0) - sqrt(Pa)), and the two must agree: a deposit whose
+    legs disagree cannot be placed in full, so this raises ValueError rather than
+    quietly keeping the smaller and losing the surplus.
     Out of range the position is single-sided, so one leg alone constrains L.
     """
     _validate_range(Pa, Pb)
@@ -36,7 +38,13 @@ def liquidity_from_amounts(x0: float, y0: float, P0: float, Pa: float, Pb: float
         return y0 / (math.sqrt(Pb) - math.sqrt(Pa))
     lx = x0 / (1.0 / math.sqrt(P0) - 1.0 / math.sqrt(Pb))
     ly = y0 / (math.sqrt(P0) - math.sqrt(Pa))
-    return min(lx, ly)
+    if abs(lx - ly) > 1e-9 * max(lx, ly):
+        raise ValueError(
+            f"unbalanced deposit at P0={P0}: the ETH leg funds L={lx:.6g}, the USDC leg "
+            f"L={ly:.6g}. A pool returns the surplus, so silently taking min(lx, ly) while "
+            f"the buy-and-hold benchmark keeps the whole basket would report undeposited "
+            f"capital as impermanent loss.")
+    return lx
 
 
 def position_amounts(L: float, P: float, Pa: float, Pb: float) -> tuple[float, float]:

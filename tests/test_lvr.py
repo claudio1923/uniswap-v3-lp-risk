@@ -95,3 +95,27 @@ def test_zero_volatility_means_no_leak():
 def test_negative_volatility_raises():
     with pytest.raises(ValueError):
         ilm.lvr_rate(L, P0, PA, PB, -0.1)
+
+
+def test_realised_lvr_is_zero_when_the_price_never_enters_the_band():
+    """Out of range there is no curvature to arbitrage against, so nothing leaks."""
+    import pandas as pd
+    import analysis as an
+    P0 = 100.0
+    prices = pd.Series([P0] + [P0 * 5] * 99,
+                       index=pd.date_range("2020-01-01", periods=100, freq="D"))
+    table = an.lvr_table(P0, 0.6, prices.iloc[1:], 100_000.0).set_index("range")
+    assert table.loc["+/-5%", "realised on the path %"] == pytest.approx(0.0, abs=1e-9)
+    assert table.loc["full (v2)", "realised on the path %"] > 0.0
+
+
+def test_realised_lvr_matches_the_in_range_rate_on_a_flat_path():
+    """A price pinned at entry is in range every day, so both columns agree."""
+    import pandas as pd
+    import analysis as an
+    P0 = 100.0
+    prices = pd.Series([P0] * 50, index=pd.date_range("2020-01-01", periods=50, freq="D"))
+    table = an.lvr_table(P0, 0.6, prices, 100_000.0).set_index("range")
+    for label in ("+/-5%", "+/-20%", "+/-50%", "full (v2)"):
+        assert table.loc[label, "realised on the path %"] == pytest.approx(
+            table.loc[label, "LVR yield % in range"], rel=1e-6)
