@@ -221,7 +221,9 @@ The 2024 result rests on one price path. Repeating it on 2021 through 2026 turns
 | 2025 | 365 | −11.5% | 74.8% | 0.16 | 11.0% | 259% | 43.3% | 60.3% | 95.6% | 21.7% | 6.8% |
 | 2026 | 235 | −18.5% | 65.1% | 0.31 | 7.2% | 424% | 14.9% | 178% | 100.0% | 18.6% | 5.2% |
 
-*"corr." is the breakeven fee APR corrected for time in range: what the position must earn on the days it is actually earning. 2026 is a partial year, through August.*
+*"corr." is the breakeven fee APR corrected for time in range: what the position must earn on the days it is actually earning.*
+
+*The 2026 row is a live partial year, computed here through 2026-08-23. ETH trades around the clock, so its last observation is the current price rather than a settled close: rerunning `analysis.py` on a later day will shift that row slightly. Every other row is final.*
 
 ![Corrected breakeven by year](figures/breakeven_by_year.png)
 
