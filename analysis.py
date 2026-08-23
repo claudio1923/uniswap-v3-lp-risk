@@ -22,7 +22,9 @@ CONFIG = {
     "capital_usdc": 100_000.0,
     "range_widths": (0.05, 0.20, 0.50),      # half-width around the entry price
     "reference_width": 0.20,                 # width detailed in the scenario table
-    "price_scenarios": (-0.50, -0.20, 0.0, 0.20, 0.50),
+    # Staggered off the range bounds: a shock landing exactly on Pa or Pb would
+    # report a boundary case as if it were an interior one.
+    "price_scenarios": (-0.60, -0.35, -0.15, 0.0, 0.15, 0.35, 0.60),
     "horizon_days": 365, "days_per_year": 365,   # crypto trades every calendar day
     "fallback_sigma": 0.60,                  # annualised, used only if yfinance fails
     "fallback_p0": 2300.0, "fallback_seed": 7,

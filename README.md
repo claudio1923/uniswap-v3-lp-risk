@@ -143,32 +143,34 @@ Daily ETH-USD closes for 2024 via `yfinance`, 366 observations; the regime study
 
 | scenario | price | LP value | hold value | IL % | IL USDC |
 |---|---|---|---|---|---|
-| −50% | 1,176 | 53,233 | 77,393 | −31.22% | −24,160 |
-| −20% | 1,882 | 85,173 | 90,957 | −6.36% | −5,784 |
+| −60% | 941 | 42,587 | 72,871 | −41.56% | −30,285 |
+| −35% | 1,529 | 69,203 | 84,175 | −17.79% | −14,972 |
+| −15% | 1,999 | 90,057 | 93,218 | −3.39% | −3,161 |
 | 0% | 2,352 | 100,000 | 100,000 | 0.00% | 0 |
-| +20% | 2,823 | 104,315 | 109,043 | −4.34% | −4,727 |
-| +50% | 3,528 | 104,315 | 122,607 | −14.92% | −18,292 |
+| +15% | 2,705 | 104,063 | 106,782 | −2.55% | −2,719 |
+| +35% | 3,176 | 104,315 | 115,825 | −9.94% | −11,510 |
+| +60% | 3,764 | 104,315 | 127,129 | −17.94% | −22,813 |
 
-The LP value is **identical** at +20% and +50%: at or above $P_b$ the position is entirely USDC and stops participating in the upside. The cap on gains is structural, not an artefact.
+The shock grid is deliberately staggered off the range bounds, so no scenario lands exactly on $P_a$ or $P_b$ and reports a boundary case as an interior one. At +15% the ±20% position is still inside its band and worth 104,063; from +35% on it is **frozen at 104,315** while buy and hold keeps climbing. At or above $P_b$ the position is entirely USDC and stops participating in the upside: the cap on gains is structural, not an artefact.
 
 ### Range width comparison
 
-| range | IL −50% | IL −20% | IL +20% | IL +50% | days out of range | breakeven fee APR |
-|---|---|---|---|---|---|---|
-| ±5% | −33.00% | −10.17% | −7.79% | −18.63% | 82.8% | 24.5% |
-| ±20% | −31.22% | −6.36% | −4.34% | −14.92% | 61.2% | 22.0% |
-| ±50% | −22.30% | −2.53% | −1.78% | −8.89% | 18.6% | 16.7% |
-| full range (v2) | −5.72% | −0.62% | −0.41% | −2.02% | 0.0% | 5.0% |
+| range | IL −60% | IL −35% | IL −15% | IL +15% | IL +35% | IL +60% | days out of range | breakeven fee APR |
+|---|---|---|---|---|---|---|---|---|
+| ±5% | −42.70% | −20.58% | −7.07% | −5.69% | −13.55% | −21.70% | 82.8% | 24.5% |
+| ±20% | −41.56% | −17.79% | −3.39% | −2.55% | −9.94% | −17.94% | 61.2% | 22.0% |
+| ±50% | −34.73% | −9.11% | −1.36% | −1.04% | −4.85% | −11.74% | 18.6% | 16.7% |
+| full range (v2) | −9.65% | −2.28% | −0.33% | −0.24% | −1.12% | −2.70% | 0.0% | 5.0% |
 
 ![IL by range width](figures/il_vs_price.png)
 
-Concentration multiplies the loss: on a +50% move the ±5% range loses 18.6% against 2.0% for the full range, **nine times as much**. The dashed red curve is the v2 benchmark and is the lower envelope of all the others.
+Concentration multiplies the loss: on a +60% move the ±5% range loses 21.7% against 2.7% for the full range, **eight times as much**. The dashed red curve is the v2 benchmark and is the lower envelope of all the others.
 
 ### Breakeven fee APR
 
 ![Breakeven fee APR](figures/breakeven.png)
 
-The breakeven rises as the range tightens, but **far less than the loss does**. Going from ±50% to ±5%, the IL at +50% worsens by a factor of 2.1 while the breakeven only moves from 16.7% to 24.5%. The reason is that at $\sigma = 64$% over a year the price almost certainly leaves any range: the three curves converge towards the same fate.
+The breakeven rises as the range tightens, but **far less than the loss does**. Going from ±50% to ±5%, the IL at +60% worsens by a factor of 1.8 while the breakeven only moves from 16.7% to 24.5%. The reason is that at $\sigma = 64$% over a year the price almost certainly leaves any range: the three curves converge towards the same fate.
 
 ### Volatility is the driver, not direction
 
@@ -272,6 +274,7 @@ uniswap-v3-lp-risk/
 ├── analysis.py         data, scenarios, tables, figures
 ├── tests/              pytest suite, network-free
 ├── requirements.txt    pinned dependency versions
+├── LICENSE             MIT
 ├── README.md
 └── figures/            il_vs_price.png, breakeven.png, greeks.png,
                         breakeven_vs_sigma.png, breakeven_by_year.png
@@ -293,3 +296,7 @@ python analysis.py
 ```
 
 Dependencies: `numpy`, `pandas`, `matplotlib`, `yfinance` (optional — without it the synthetic fallback is used).
+
+## License
+
+MIT. See [LICENSE](LICENSE).
